@@ -1,0 +1,23 @@
+@font-face {
+    font-family: 'IntelOneMono Medium';
+    src:
+        local('IntelOneMono'),
+        url('./fonts/IntelOneMono/IntelOneMono-Medium.ttf') format('truetype');
+    font-weight: 500;
+}
+
+@font-face {
+    font-family: 'IntelOneMono';
+    src:
+        local('IntelOneMono'),
+        url('./fonts/IntelOneMono/IntelOneMono-Regular.ttf') format('truetype');
+    font-weight: bold;
+}
+
+@font-face {
+    font-family: 'IntelOneMono Bold';
+    src:
+        local('IntelOneMono'),
+        url('./fonts/IntelOneMono/IntelOneMono-Bold.ttf') format('truetype');
+    font-weight: bold;
+}
