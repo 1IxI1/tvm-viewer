@@ -64,6 +64,7 @@ function App() {
     const [isErrorOpen, setIsErrorOpen] = useState(false);
     const [areLogsOpen, setAreLogsOpen] = useState(false);
     const [errorText, setErrorText] = useState('');
+    const [emulationStatus, setEmulationStatus] = useState<string>('');
     const [emulationResult, setEmulationResult] = useState<
         EmulateWithStackResult | undefined
     >(undefined);
@@ -77,7 +78,10 @@ function App() {
         setProcessing(true);
         try {
             const tx = await linkToTx(link);
-            const emulation = await getEmulationWithStack(tx);
+            const emulation = await getEmulationWithStack(
+                tx,
+                setEmulationStatus
+            );
             setEmulationResult(emulation);
         } catch (e) {
             if (e instanceof Error) {
@@ -511,16 +515,21 @@ function App() {
                         <></>
                     )}
                     {processing ? (
-                        <Center>
-                            <Spinner
-                                mt="2rem"
-                                thickness="4px"
-                                speed="0.65s"
-                                emptyColor="gray.200"
-                                color="blue.500"
-                                size="xl"
-                            />
-                        </Center>
+                        <Box>
+                            <Center>
+                                <Spinner
+                                    mt="2rem"
+                                    thickness="4px"
+                                    speed="0.65s"
+                                    emptyColor="gray.200"
+                                    color="blue.500"
+                                    size="xl"
+                                />
+                            </Center>
+                            <Center>
+                                <Text mt="0.5rem" fontSize="14">{emulationStatus}</Text>
+                            </Center>
+                        </Box>
                     ) : (
                         <></>
                     )}

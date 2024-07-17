@@ -126,7 +126,8 @@ export async function waitForRateLimit() {
 }
 
 export async function getEmulationWithStack(
-    txLink: string | BaseTxInfo
+    txLink: string | BaseTxInfo,
+    sendStatus: (status: string) => void = () => {}
 ): Promise<EmulateWithStackResult> {
     // const endpoint = await getHttpV4Endpoint({ network: 'mainnet' });
 
@@ -150,6 +151,7 @@ export async function getEmulationWithStack(
     } = typeof txLink == 'string' ? await linkToTx(txLink) : txLink;
 
     // 1. get tx alone to get the mc block seqno
+    sendStatus('Getting the tx');
     const tx = (await clientV4.getAccountTransactions(address, lt, hash))[0];
     console.log(tx.tx.now, 'tx time');
     await waitForRateLimit();
@@ -178,6 +180,7 @@ export async function getEmulationWithStack(
     }
 
     // 3. get txs from the mc block (maybe many shard blocks)
+    sendStatus('Getting previous txs');
     const txs = await getOtherTxs(clientV2, {
         address,
         lt,
@@ -189,6 +192,7 @@ export async function getEmulationWithStack(
     console.log('first:', txs[txs.length - 1].lt, 'last:', txs[0].lt);
 
     // 3.1 get blockchain config
+    sendStatus('Getting blockchain config');
     await waitForRateLimit();
     const getConfigResult = await clientV4.getConfig(mcBlockSeqno);
     const blockConfig = getConfigResult.config.cell;
@@ -199,6 +203,7 @@ export async function getEmulationWithStack(
     );
 
     // 4. get prev. state from prev. block
+    sendStatus('Getting account state');
     let account: AccountFromAPI;
     const getAccountResult = await clientV4.getAccount(
         mcBlockSeqno - 1,
@@ -266,10 +271,12 @@ export async function getEmulationWithStack(
         .toString('base64');
 
     // 6. emulate prev. txs in block
-
+    sendStatus('Emulating');
     let prevBalance = BigInt(account.balance.coins);
     if (prevTxsInBlock.length > 0) {
+        let on = 1;
         for (let _tx of prevTxsInBlock) {
+            sendStatus(`Emulating ${on}/${prevTxsInBlock.length}`);
             let midRes = await _emulate(
                 blockchain1.executor,
                 _tx,
@@ -306,6 +313,7 @@ export async function getEmulationWithStack(
             prevBalance = newBalance || 0n;
 
             console.log('');
+            on++;
         }
     }
 
@@ -314,6 +322,7 @@ export async function getEmulationWithStack(
     const msg = txs[0].inMessage;
     if (!msg) throw new Error('No in_message was found in tx');
 
+    sendStatus('Emulating the tx');
     let accountCopy = shardAccountStr;
     let txResCorrect = await _emulate(
         blockchain1.executor,
@@ -327,6 +336,8 @@ export async function getEmulationWithStack(
         accountCopy,
         true
     );
+
+    sendStatus('Packing the result');
 
     if (
         tx.tx.description.type === 'generic' &&
