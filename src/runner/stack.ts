@@ -1,6 +1,100 @@
 import { Address, BitReader, BitString, Builder, Cell, Slice } from '@ton/core';
 import { StackElement } from './types';
 
+// from ton-core/src/boc/utils/paddedBits.ts (edited)
+export function paddedBufferToBits(buff: Buffer, incomplete: boolean = true) {
+    let bitLen = buff.length * 8;
+    if (incomplete) {
+        // Finding rightmost non-zero byte in the buffer
+        for (let i = buff.length - 1; i >= 0; i--) {
+            if (buff[i] !== 0) {
+                const testByte = buff[i];
+                // Looking for a rightmost set padding bit
+                let bitPos = testByte & -testByte;
+                if ((bitPos & 1) == 0) {
+                    // It's power of 2 (only one bit set)
+                    bitPos = Math.log2(bitPos) + 1;
+                }
+                bitLen = i * 8; // Full bytes * 8
+                bitLen += 8 - bitPos;
+                break;
+            }
+        }
+    }
+    return new BitString(buff, 0, bitLen);
+}
+
+export function builderFromCanonical(word: string): Builder {
+    let buffer = Buffer.from(word.slice(3, -1), 'hex');
+    // first byte - number of refs. load it
+    const refs = buffer[0];
+    // second - num of bytes
+    let len = buffer[1];
+    buffer = buffer.subarray(2);
+    let incomplete = false;
+    if (len % 2 == 1) {
+        incomplete = true;
+        len -= 1;
+    }
+    len /= 2;
+    let bs = paddedBufferToBits(buffer, incomplete);
+    let builder = new Builder();
+    builder.storeBits(bs);
+    return builder;
+}
+
+export function sliceFromCanonical(
+    word: string,
+    wordsNext: string[]
+): Slice | Address {
+    let hexStr = word.slice(8, -1);
+    let buffer = Buffer.from(hexStr, 'hex');
+
+    // second byte - num of bytes
+    let lenFromStr = buffer[1];
+    buffer = buffer.subarray(2);
+    let incomplete = false;
+    if (lenFromStr % 2 == 1) {
+        incomplete = true;
+        lenFromStr -= 1;
+    }
+    lenFromStr /= 2;
+
+    // `311..578;` -> 311 - offset, 578 - len
+    // bits: 0..400; refs: 0..2}
+    const bitsStr = wordsNext[1];
+    const refsStr = wordsNext[3];
+    const offsetAndLen = bitsStr.split('..');
+    const offset = Number(offsetAndLen[0]);
+    const lenFromLog = Number(offsetAndLen[1].slice(0, -1));
+    const refsOffsetAndLen = refsStr.split('..');
+    const refsOffset = Number(refsOffsetAndLen[0]);
+    const refsLen = Number(refsOffsetAndLen[1].slice(0, -1));
+    const refsAvailable = refsLen - refsOffset;
+
+    let fakeRefs = [];
+    for (let i = 0; i < refsAvailable; i++) {
+        fakeRefs.push(Cell.EMPTY);
+    }
+
+    let bs = paddedBufferToBits(buffer, incomplete);
+    bs = bs.substring(0, lenFromLog);
+    const br = new BitReader(bs, offset);
+    let slice = new Slice(br, [...fakeRefs]);
+
+    // shake out offset bits
+    slice = slice.asCell().asSlice();
+
+    // try parse address
+    if (slice.remainingBits == 267) {
+        try {
+            const addr = slice.loadAddress();
+            return addr;
+        } catch (e) {}
+    }
+    return slice;
+}
+
 function parseStackElement(word: string, wordsNext: string[]): StackElement {
     // Parsing every type of stack element:
     //
@@ -29,63 +123,8 @@ function parseStackElement(word: string, wordsNext: string[]): StackElement {
             console.error('Error parsing cell:', e);
             return word;
         }
-    } else if (word.startsWith('CS{Cell{')) {
-        // slice - push Slice type (but no refs)
-        let buffer = Buffer.from(word.slice(8), 'hex');
-        buffer = buffer.subarray(2); // skip 2 bytes
-        // `311..578;` -> 311 - offset, 578 - len
-
-        // bits: 0..400; refs: 0..2}
-        const bitsStr = wordsNext[1];
-        const refsStr = wordsNext[3];
-
-        const offsetAndLen = bitsStr.split('..');
-        const offset = Number(offsetAndLen[0]);
-        const len = Number(offsetAndLen[1].slice(0, -1));
-        const bitsAvailable = len - offset;
-
-        const refsOffsetAndLen = refsStr.split('..');
-        const refsOffset = Number(refsOffsetAndLen[0]);
-        const refsLen = Number(refsOffsetAndLen[1].slice(0, -1));
-        console.log('refsOffset:', refsOffset, 'refsLen:', refsLen);
-        const refsAvailable = refsLen - refsOffset;
-
-        const bs = new BitString(buffer, 0, len);
-        const br = new BitReader(bs, offset);
-        let fakeRefs = [];
-        for (let i = 0; i < refsAvailable; i++) {
-            fakeRefs.push(Cell.EMPTY);
-        }
-        let slice = new Slice(br, [...fakeRefs]);
-        slice = slice.asCell().asSlice();
-
-        // try parse address
-        if (slice.remainingBits == 267) {
-            try {
-                const addr = slice.loadAddress();
-                // console.log('Parsed address:', addr.toString());
-                return addr;
-            } catch (e) {
-                // console.log('Error parsing address:', e);
-            }
-        }
-        return slice;
-    } else if (
-        word == 'bits:' ||
-        word == 'refs:' ||
-        word.indexOf('..') !== -1
-    ) {
-        return undefined;
-    } else if (word.startsWith('BC{')) {
-        // builder - push Builder type
-        let buffer = Buffer.from(word.slice(3, -1), 'hex');
-        // skip 2 bytes
-        buffer = buffer.subarray(2);
-        let builder = new Builder();
-        builder.storeBuffer(buffer);
-        return builder;
     } else if (word.startsWith('Cont{')) {
-        // continuation - push Cell type
+        // continuation - Cell type
         try {
             let cell = Cell.fromBoc(Buffer.from(word.slice(5, -1), 'hex'))[0];
             return cell;
@@ -93,6 +132,19 @@ function parseStackElement(word: string, wordsNext: string[]): StackElement {
             console.error('Error parsing continuation:', e);
             return word;
         }
+    } else if (word.startsWith('CS{Cell{')) {
+        // slice - Slice or Address type
+        return sliceFromCanonical(word, wordsNext);
+    } else if (word.startsWith('BC{')) {
+        // builder - Builder type
+        return builderFromCanonical(word.slice(3, -1));
+    } else if (
+        // slice appendix info
+        word == 'bits:' ||
+        word == 'refs:' ||
+        word.indexOf('..') !== -1
+    ) {
+        return undefined;
     } else {
         try {
             // try parsing Integer

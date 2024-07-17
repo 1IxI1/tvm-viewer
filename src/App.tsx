@@ -372,7 +372,14 @@ function App() {
                                                                 )
                                                             }
                                                         >
-                                                            <Text>
+                                                            <Text
+                                                                bgColor={
+                                                                    selectedStep ==
+                                                                    i
+                                                                        ? 'white'
+                                                                        : undefined
+                                                                }
+                                                            >
                                                                 {i + 1}.{' '}
                                                                 {shortStep(
                                                                     log.instruction
@@ -384,102 +391,114 @@ function App() {
                                             )}
                                         </Box>
                                         <Spacer />
-                                        <Box position="relative">
-                                            <Box
-                                                position="sticky"
-                                                zIndex="1"
-                                                w="25rem"
-                                                bg="#D9D9D9"
-                                                top="1rem"
-                                                py="1rem"
-                                                border="1px dashed"
-                                                borderColor="#A2A2A2"
-                                            >
-                                                <Flex px="1rem">
-                                                    <Tooltip
-                                                        label="Use Left key"
-                                                        openDelay={500}
-                                                        fontSize="12"
-                                                    >
-                                                        <Button
-                                                            mt="0.5rem"
-                                                            mr="1rem"
-                                                            variant="link"
-                                                            p="0"
-                                                            fontSize="14"
-                                                            color="#000"
-                                                            onClick={prevStep}
+                                        {emulationResult.computeLogs && (
+                                            <Box position="relative">
+                                                <Box
+                                                    position="sticky"
+                                                    zIndex="1"
+                                                    w="25rem"
+                                                    bg="#D9D9D9"
+                                                    top="1rem"
+                                                    py="1rem"
+                                                    border="1px dashed"
+                                                    borderColor="#A2A2A2"
+                                                >
+                                                    <Flex px="1rem">
+                                                        <Tooltip
+                                                            label="Use Left key"
+                                                            openDelay={500}
+                                                            fontSize="12"
                                                         >
-                                                            {'<'}
-                                                        </Button>
-                                                    </Tooltip>
-                                                    <Spacer />
+                                                            <Button
+                                                                mt="0.5rem"
+                                                                mr="1rem"
+                                                                variant="link"
+                                                                p="0"
+                                                                fontSize="14"
+                                                                color="#000"
+                                                                onClick={
+                                                                    prevStep
+                                                                }
+                                                            >
+                                                                {'<'}
+                                                            </Button>
+                                                        </Tooltip>
+                                                        <Spacer />
+                                                        <Center>
+                                                            <Text
+                                                                fontFamily="IntelOneMono Bold"
+                                                                fontSize="14"
+                                                                textAlign="center"
+                                                            >
+                                                                {selectedStep +
+                                                                    1}
+                                                                .{' '}
+                                                                {shortStep(
+                                                                    emulationResult
+                                                                        .computeLogs[
+                                                                        selectedStep
+                                                                    ]
+                                                                        .instruction
+                                                                )}
+                                                            </Text>
+                                                        </Center>
+                                                        <Spacer />
+                                                        <Tooltip
+                                                            label="Use Right key"
+                                                            openDelay={500}
+                                                            fontSize="12"
+                                                        >
+                                                            <Button
+                                                                mt="0.5rem"
+                                                                ml="1rem"
+                                                                variant="link"
+                                                                p="0"
+                                                                fontSize="14"
+                                                                color="#000"
+                                                                onClick={
+                                                                    nextStep
+                                                                }
+                                                            >
+                                                                {'>'}
+                                                            </Button>
+                                                        </Tooltip>
+                                                    </Flex>
                                                     <Center>
-                                                        <Text
-                                                            fontFamily="IntelOneMono Bold"
-                                                            fontSize="14"
-                                                            textAlign="center"
-                                                        >
-                                                            {selectedStep + 1}.{' '}
-                                                            {shortStep(
-                                                                emulationResult
-                                                                    .computeLogs[
-                                                                    selectedStep
-                                                                ].instruction
-                                                            )}
+                                                        <Text fontSize="12">
+                                                            Stack after:
                                                         </Text>
                                                     </Center>
-                                                    <Spacer />
-                                                    <Tooltip
-                                                        label="Use Right key"
-                                                        openDelay={500}
-                                                        fontSize="12"
+                                                    <TableContainer
+                                                        mt="0.5rem"
+                                                        overflowY="scroll"
+                                                        height="25rem"
                                                     >
-                                                        <Button
-                                                            mt="0.5rem"
-                                                            ml="1rem"
-                                                            variant="link"
-                                                            p="0"
-                                                            fontSize="14"
-                                                            color="#000"
-                                                            onClick={nextStep}
+                                                        <Table
+                                                            size="sm"
+                                                            variant="striped"
                                                         >
-                                                            {'>'}
-                                                        </Button>
-                                                    </Tooltip>
-                                                </Flex>
-                                                <Center>
-                                                    <Text fontSize="12">
-                                                        Stack after:
-                                                    </Text>
-                                                </Center>
-                                                <TableContainer
-                                                    mt="0.5rem"
-                                                    overflowY="scroll"
-                                                    height="25rem"
-                                                >
-                                                    <Table
-                                                        size="sm"
-                                                        variant="striped"
-                                                    >
-                                                        <Tbody>
-                                                            {emulationResult.computeLogs[
-                                                                selectedStep
-                                                            ].stackAfter
-                                                                .toReversed()
-                                                                .map(
-                                                                    (item, i) =>
-                                                                        stackItemElement(
+                                                            <Tbody>
+                                                                {emulationResult.computeLogs[
+                                                                    selectedStep
+                                                                ].stackAfter
+                                                                    .toReversed()
+                                                                    .map(
+                                                                        (
                                                                             item,
-                                                                            i,
-                                                                            handleCopy
-                                                                        )
-                                                                )}
-                                                        </Tbody>
-                                                    </Table>
-                                                </TableContainer>
+                                                                            i
+                                                                        ) =>
+                                                                            stackItemElement(
+                                                                                item,
+                                                                                i,
+                                                                                handleCopy
+                                                                            )
+                                                                    )}
+                                                            </Tbody>
+                                                        </Table>
+                                                    </TableContainer>
+                                                </Box>
                                             </Box>
-                                        </Box>
+                                        )}
                                     </Flex>
                                 </Box>
                             ) : (
@@ -616,7 +635,7 @@ function stackItemElement(
         if (strRes.length > 14)
             strRes = strRes.slice(0, 7) + '...' + strRes.slice(-7);
         strRes =
-            `Cell x{${strRes}}` +
+            `Cell {${strRes}}` +
             (item.refs.length > 0 ? ` + ${item.refs.length} refs` : '');
         copyContent = item.toBoc().toString('hex');
     }
@@ -627,7 +646,7 @@ function stackItemElement(
         if (strRes.length > 14)
             strRes = strRes.slice(0, 7) + '...' + strRes.slice(-7);
         strRes =
-            `Slice x{${strRes}}` +
+            `Slice {${strRes}}` +
             (item.remainingRefs > 0 ? ` + ${item.remainingRefs} refs` : '');
         copyContent = item.asCell().toBoc().toString('hex');
     }
@@ -637,7 +656,7 @@ function stackItemElement(
         if (strRes.length > 14)
             strRes = strRes.slice(0, 7) + '...' + strRes.slice(-7);
         strRes =
-            `Builder x{${strRes}}` +
+            `Builder {${strRes}}` +
             (item.refs > 0 ? ` + ${item.refs} refs` : '');
         copyContent = item.asCell().toBoc().toString('hex');
     }

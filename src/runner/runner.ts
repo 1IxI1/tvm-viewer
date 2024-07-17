@@ -360,7 +360,7 @@ export async function getEmulationWithStack(
         }
 
         if (line.startsWith('stack:')) {
-            // console.log('Parsing stack for', instruction, line);
+            console.log('Parsing stack for', instruction, line);
             const stack = parseStack(line);
             // got stack. now link it with the instruction
             if (instruction) {
