@@ -84,6 +84,7 @@ function App() {
                 setErrorText(e.message);
                 setIsErrorOpen(true);
             }
+            console.error(e);
         }
         setProcessing(false);
     }
@@ -584,7 +585,6 @@ function stackItemElement(
                             <Text>{i}. Tuple</Text>
                             <Flex mt="0.5rem">
                                 <Divider orientation="vertical" />
-                                {/* <Box bg="gray.300" p="1rem"> */}
                                 <TableContainer>
                                     <Table
                                         size="sm"
@@ -602,7 +602,6 @@ function stackItemElement(
                                         </Tbody>
                                     </Table>
                                 </TableContainer>
-                                {/* </Box> */}
                             </Flex>
                         </Box>
                     </Td>
@@ -658,7 +657,7 @@ function stackItemElement(
     else {
         strRes = item.toString();
         if (strRes.length > 30)
-            strRes = strRes.slice(0, 26) + '...' + strRes.slice(-4);
+            strRes = strRes.slice(0, 15) + '...' + strRes.slice(-15);
         copyContent = item.toString();
     }
     return (

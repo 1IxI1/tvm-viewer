@@ -32,6 +32,7 @@ function parseStackElement(word: string, wordsNext: string[]): StackElement {
     } else if (word.startsWith('CS{Cell{')) {
         // slice - push Slice type (but no refs)
         let buffer = Buffer.from(word.slice(8), 'hex');
+        buffer = buffer.subarray(2); // skip 2 bytes
         // `311..578;` -> 311 - offset, 578 - len
 
         // bits: 0..400; refs: 0..2}
@@ -46,9 +47,9 @@ function parseStackElement(word: string, wordsNext: string[]): StackElement {
         const refsOffsetAndLen = refsStr.split('..');
         const refsOffset = Number(refsOffsetAndLen[0]);
         const refsLen = Number(refsOffsetAndLen[1].slice(0, -1));
+        console.log('refsOffset:', refsOffset, 'refsLen:', refsLen);
         const refsAvailable = refsLen - refsOffset;
 
-        // console.log(buffer, offset, len)
         const bs = new BitString(buffer, 0, len);
         const br = new BitReader(bs, offset);
         let fakeRefs = [];
@@ -59,10 +60,10 @@ function parseStackElement(word: string, wordsNext: string[]): StackElement {
         slice = slice.asCell().asSlice();
 
         // try parse address
-        if (bitsAvailable == 267 && refsLen == 0) {
+        if (slice.remainingBits == 267) {
             try {
                 const addr = slice.loadAddress();
-                console.log('Parsed address:', addr);
+                // console.log('Parsed address:', addr.toString());
                 return addr;
             } catch (e) {
                 // console.log('Error parsing address:', e);
@@ -78,6 +79,8 @@ function parseStackElement(word: string, wordsNext: string[]): StackElement {
     } else if (word.startsWith('BC{')) {
         // builder - push Builder type
         let buffer = Buffer.from(word.slice(3, -1), 'hex');
+        // skip 2 bytes
+        buffer = buffer.subarray(2);
         let builder = new Builder();
         builder.storeBuffer(buffer);
         return builder;
