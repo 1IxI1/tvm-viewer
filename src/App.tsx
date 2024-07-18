@@ -32,14 +32,14 @@ import {
     Td,
     Icon,
 } from '@chakra-ui/react';
-import { linkToTx } from './runner/utils';
-import { getEmulationWithStack } from './runner/runner';
-import theme from './theme';
-import { EmulateWithStackResult, StackElement } from './runner/types';
-import { Builder, Cell, fromNano, Slice } from '@ton/core';
 import { ExternalLinkIcon } from '@chakra-ui/icons';
+import { Builder, Cell, fromNano, Slice } from '@ton/core';
+import { getEmulationWithStack } from './runner/runner';
+import { EmulateWithStackResult, StackElement } from './runner/types';
+import { linkToTx } from './runner/utils';
 import { GithubIcon } from './icons/github';
 import { TonIcon } from './icons/ton';
+import theme from './theme';
 
 type KeyPressHandler = () => void;
 
@@ -59,6 +59,11 @@ const useGlobalKeyPress = (key: string, action: KeyPressHandler) => {
     }, [key, action]);
 };
 
+export const getQueryParam = (param: string) => {
+    const queryParams = new URLSearchParams(window.location.search);
+    return queryParams.get(param);
+};
+
 function App() {
     const [link, setLink] = useState<string>('');
     const [isErrorOpen, setIsErrorOpen] = useState(false);
@@ -71,15 +76,18 @@ function App() {
     const [processing, setProcessing] = useState(false);
     const [selectedStep, setSelectedStep] = useState<number>(0);
 
+    const testnet = getQueryParam('testnet') === 'true';
+
     async function viewTransaction() {
         console.log('Viewing transaction:', link);
         setErrorText('');
         setEmulationResult(undefined);
         setProcessing(true);
         try {
-            const tx = await linkToTx(link);
+            const tx = await linkToTx(link, testnet);
             const emulation = await getEmulationWithStack(
                 tx,
+                testnet,
                 setEmulationStatus
             );
             setEmulationResult(emulation);
@@ -136,6 +144,16 @@ function App() {
 
     return (
         <ChakraProvider theme={theme}>
+            {testnet && (
+                <Box bg={'red.500'} width="100%" mb="-13px">
+                    <Center>
+                        <Text color="white" mt="3px" mb="5px" fontSize="12">
+                            Testnet version
+                        </Text>
+                    </Center>
+                </Box>
+            )}
+
             <Flex mt="2rem" mx="2rem">
                 <Spacer />
                 <Link
@@ -527,7 +545,9 @@ function App() {
                                 />
                             </Center>
                             <Center>
-                                <Text mt="0.5rem" fontSize="14">{emulationStatus}</Text>
+                                <Text mt="0.5rem" fontSize="14">
+                                    {emulationStatus}
+                                </Text>
                             </Center>
                         </Box>
                     ) : (

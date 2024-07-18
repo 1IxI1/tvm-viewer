@@ -21,7 +21,7 @@ describe('Converter', () => {
 
     let ex: { lt: bigint; hash: Buffer; addr: Address };
     it('should convert just hash to tx', async () => {
-        ex = await linkToTx(justHash);
+        ex = await linkToTx(justHash, false);
         expect(ex.lt).toBe(47670702000009n);
         expect(ex.hash.toString('base64')).toBe(
             'Pl9JeY3iOdpdj4C03DACBNN2E+QgOj97h3wEqIyBhWs='
@@ -31,42 +31,42 @@ describe('Converter', () => {
         );
     });
     it('should convert toncx', async () => {
-        const res = await linkToTx(toncx);
+        const res = await linkToTx(toncx, false);
         expect(res.lt).toBe(ex.lt);
         expect(res.hash.equals(ex.hash)).toBe(true);
         expect(res.addr.equals(ex.addr)).toBe(true);
     });
     it('should convert tonscan', async () => {
         await waitForRateLimit();
-        const res = await linkToTx(tonscan);
+        const res = await linkToTx(tonscan, false);
         expect(res.lt).toBe(ex.lt);
         expect(res.hash.equals(ex.hash)).toBe(true);
         expect(res.addr.equals(ex.addr)).toBe(true);
     });
     it('should convert tonviewer', async () => {
         await waitForRateLimit();
-        const res = await linkToTx(tonviewer);
+        const res = await linkToTx(tonviewer, false);
         expect(res.lt).toBe(ex.lt);
         expect(res.hash.equals(ex.hash)).toBe(true);
         expect(res.addr.equals(ex.addr)).toBe(true);
     });
     it('should convert toncoin', async () => {
         await waitForRateLimit();
-        const res = await linkToTx(toncoin);
+        const res = await linkToTx(toncoin, false);
         expect(res.lt).toBe(ex.lt);
         expect(res.hash.equals(ex.hash)).toBe(true);
         expect(res.addr.equals(ex.addr)).toBe(true);
     });
     it('should convert lt:hash', async () => {
         await waitForRateLimit();
-        const res = await linkToTx(ltHash);
+        const res = await linkToTx(ltHash, false);
         expect(res.lt).toBe(ex.lt);
         expect(res.hash.equals(ex.hash)).toBe(true);
         expect(res.addr.equals(ex.addr)).toBe(true);
     });
 
     it('should convert tx to a link', () => {
-        const reverseEx = txToLinks(ex);
+        const reverseEx = txToLinks(ex, false);
         let i = 0;
         for (let [_, link] of Object.entries(reverseEx)) {
             expect(linkZoo[i] == link);
@@ -75,13 +75,16 @@ describe('Converter', () => {
     });
 
     it('should get mc block by shard block', async () => {
-        const res = await mcSeqnoByShard({
-            workchain: 0,
-            seqno: 41917556,
-            shard: '-9223372036854775808',
-            rootHash: 'MHnWHKLB8ljiAn7hYlqxIGdb92upgg57Kffxgf2EqBg=',
-            fileHash: '16ll3S16/iv63Ins6npGQa6sIPJUhoJG6O719AqyMkA=',
-        });
+        const res = await mcSeqnoByShard(
+            {
+                workchain: 0,
+                seqno: 41917556,
+                shard: '-9223372036854775808',
+                rootHash: 'MHnWHKLB8ljiAn7hYlqxIGdb92upgg57Kffxgf2EqBg=',
+                fileHash: '16ll3S16/iv63Ins6npGQa6sIPJUhoJG6O719AqyMkA=',
+            },
+            false
+        );
         expect(res).toBe(36109845);
     });
 });
@@ -108,7 +111,7 @@ describe('Runner', () => {
 
     it('should emulate first tx', async () => {
         await waitForRateLimit();
-        const res = await getEmulationWithStack(first);
+        const res = await getEmulationWithStack(first, false);
         expect(res.stateUpdateHashOk).toBe(true);
         expect(res.lt).toBe(44640875000007n);
         expect(res.computeInfo).not.toBe('skipped');
@@ -122,7 +125,7 @@ describe('Runner', () => {
     it('should emulate other txs', async () => {
         for (let tx of txs) {
             await waitForRateLimit();
-            const res = await getEmulationWithStack(tx);
+            const res = await getEmulationWithStack(tx, false);
             expect(res.stateUpdateHashOk).toBe(true);
             // if (res.computeInfo !== 'skipped')
             //     expect(res.computeLogs.length).toBe(
@@ -134,7 +137,7 @@ describe('Runner', () => {
     it('should emulate txs with random', async () => {
         for (let tx of txsWithRandom) {
             await waitForRateLimit();
-            const res = await getEmulationWithStack(tx);
+            const res = await getEmulationWithStack(tx, false);
             expect(res.stateUpdateHashOk).toBe(false);
             if (res.computeInfo !== 'skipped')
                 expect(res.computeInfo.success).toBe(true);

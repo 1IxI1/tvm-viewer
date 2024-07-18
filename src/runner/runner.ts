@@ -127,12 +127,13 @@ export async function waitForRateLimit() {
 
 export async function getEmulationWithStack(
     txLink: string | BaseTxInfo,
+    testnet: boolean,
     sendStatus: (status: string) => void = () => {}
 ): Promise<EmulateWithStackResult> {
     // const endpoint = await getHttpV4Endpoint({ network: 'mainnet' });
 
-    const endpointV4 = 'https://mainnet-v4.tonhubapi.com';
-    const endpointV2 = 'https://toncenter.com/api/v2/jsonRPC';
+    const endpointV4 = `https://${testnet ? 'sandbox' : 'mainnet'}-v4.tonhubapi.com`;
+    const endpointV2 = `https://${testnet ? 'testnet.' : ''}toncenter.com/api/v2/jsonRPC`;
 
     const clientV4 = new TonClient4({
         endpoint: endpointV4,
@@ -148,14 +149,14 @@ export async function getEmulationWithStack(
         lt,
         hash,
         addr: address,
-    } = typeof txLink == 'string' ? await linkToTx(txLink) : txLink;
+    } = typeof txLink == 'string' ? await linkToTx(txLink, testnet) : txLink;
 
     // 1. get tx alone to get the mc block seqno
     sendStatus('Getting the tx');
     const tx = (await clientV4.getAccountTransactions(address, lt, hash))[0];
     console.log(tx.tx.now, 'tx time');
     await waitForRateLimit();
-    const mcSeqno = await mcSeqnoByShard(tx.block);
+    const mcSeqno = await mcSeqnoByShard(tx.block, testnet);
     await waitForRateLimit();
     const fullBlock = await clientV4.getBlock(mcSeqno);
     const mcBlockSeqno = fullBlock.shards[0].seqno;
@@ -509,6 +510,6 @@ export async function getEmulationWithStack(
         computeLogs: TVMResult,
         stateUpdateHashOk,
         executorLogs: txResCorrect.logs,
-        links: txToLinks({ addr: address, lt, hash }),
+        links: txToLinks({ addr: address, lt, hash }, testnet),
     };
 }

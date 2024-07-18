@@ -11,15 +11,19 @@ import {
 } from './types';
 
 export async function fetchTransactions(
-    params: GetTransactionsParams
+    params: GetTransactionsParams,
+    testnet: boolean
 ): Promise<TransactionList> {
     try {
         const response: AxiosResponse<{
             transactions: TransactionIndexed[];
             address_book: Record<string, AddressBookEntry>;
-        }> = await axios.get('https://toncenter.com/api/v3/transactions', {
-            params,
-        });
+        }> = await axios.get(
+            `https://${testnet ? 'testnet.' : ''}toncenter.com/api/v3/transactions`,
+            {
+                params,
+            }
+        );
         return response.data;
     } catch (error) {
         console.error('Error fetching transactions:', error);
@@ -27,19 +31,22 @@ export async function fetchTransactions(
     }
 }
 
-export async function mcSeqnoByShard(shard: {
-    workchain: number;
-    seqno: number;
-    shard: string;
-    rootHash: string;
-    fileHash: string;
-}): Promise<number> {
+export async function mcSeqnoByShard(
+    shard: {
+        workchain: number;
+        seqno: number;
+        shard: string;
+        rootHash: string;
+        fileHash: string;
+    },
+    testnet: boolean
+): Promise<number> {
     try {
         const shardInt = BigInt(shard.shard);
         const shardUint =
             shardInt < 0 ? shardInt + BigInt('0x10000000000000000') : shardInt;
         const response: AxiosResponse<any> = await axios.get(
-            'https://toncenter.com/api/v3/blocks',
+            `https://${testnet ? 'testnet.' : ''}toncenter.com/api/v3/blocks`,
             {
                 params: {
                     workchain: 0,
@@ -64,36 +71,57 @@ export async function mcSeqnoByShard(shard: {
     }
 }
 
-export async function linkToTx(txLink: string): Promise<BaseTxInfo> {
+export async function linkToTx(
+    txLink: string,
+    testnet: boolean
+): Promise<BaseTxInfo> {
     // break given tx link to lt, hash, addr
 
     let lt: bigint, hash: Buffer, addr: Address;
 
-    if (txLink.startsWith('https://ton.cx/tx/')) {
+    if (
+        txLink.startsWith('https://ton.cx/tx/') ||
+        txLink.startsWith('https://testnet.ton.cx/tx/')
+    ) {
         // example:
         // https://ton.cx/tx/47670702000009:Pl9JeY3iOdpdj4C03DACBNN2E+QgOj97h3wEqIyBhWs=:EQDa4VOnTYlLvDJ0gZjNYm5PXfSmmtL6Vs6A_CZEtXCNICq_
-        const infoPart = txLink.slice(18);
+        const infoPart = testnet ? txLink.slice(26) : txLink.slice(18);
         let [ltStr, hashStr, addrStr] = infoPart.split(':');
         lt = BigInt(ltStr);
         hash = Buffer.from(hashStr, 'base64');
         addr = Address.parse(addrStr);
-    } else if (txLink.startsWith('https://tonviewer.com/')) {
+    } else if (
+        txLink.startsWith('https://tonviewer.com/') ||
+        txLink.startsWith('https://testnet.tonviewer.com/')
+    ) {
         // example:
         // https://tonviewer.com/transaction/3e5f49798de239da5d8f80b4dc300204d37613e4203a3f7b877c04a88c81856b
-        const infoPart = txLink.slice(34);
-        const res = await fetchTransactions({ hash: infoPart, limit: 1 });
+        const infoPart = testnet ? txLink.slice(42) : txLink.slice(34);
+        const res = await fetchTransactions(
+            { hash: infoPart, limit: 1 },
+            testnet
+        );
         hash = Buffer.from(infoPart, 'hex');
         addr = Address.parseRaw(res.transactions[0].account);
         lt = BigInt(res.transactions[0].lt);
-    } else if (txLink.startsWith('https://tonscan.org/tx/')) {
+    } else if (
+        txLink.startsWith('https://tonscan.org/tx/') ||
+        txLink.startsWith('https://testnet.tonscan.org/tx/')
+    ) {
         // example:
         // https://tonscan.org/tx/Pl9JeY3iOdpdj4C03DACBNN2E+QgOj97h3wEqIyBhWs=
-        const infoPart = txLink.slice(23);
-        const res = await fetchTransactions({ hash: infoPart, limit: 1 });
+        const infoPart = testnet ? txLink.slice(31) : txLink.slice(23);
+        const res = await fetchTransactions(
+            { hash: infoPart, limit: 1 },
+            testnet
+        );
         hash = Buffer.from(infoPart, 'base64');
         addr = Address.parseRaw(res.transactions[0].account);
         lt = BigInt(res.transactions[0].lt);
-    } else if (txLink.startsWith('https://explorer.toncoin.org/transaction')) {
+    } else if (
+        txLink.startsWith('https://explorer.toncoin.org/transaction') ||
+        txLink.startsWith('https://test-explorer.toncoin.org/transaction')
+    ) {
         // example:
         // https://explorer.toncoin.org/transaction?account=EQDa4VOnTYlLvDJ0gZjNYm5PXfSmmtL6Vs6A_CZEtXCNICq_&lt=47670702000009&hash=3e5f49798de239da5d8f80b4dc300204d37613e4203a3f7b877c04a88c81856b
         const url = new URL(txLink);
@@ -108,14 +136,20 @@ export async function linkToTx(txLink: string): Promise<BaseTxInfo> {
             let [ltStr, hashStr] = txLink.split(':');
             lt = BigInt(ltStr);
             hash = Buffer.from(hashStr, 'hex');
-            const res = await fetchTransactions({ hash: hashStr, limit: 1 });
+            const res = await fetchTransactions(
+                { hash: hashStr, limit: 1 },
+                testnet
+            );
             addr = Address.parseRaw(res.transactions[0].account);
         } catch (e) {
             try {
                 // (just hash)
                 // example:
                 // 3e5f49798de239da5d8f80b4dc300204d37613e4203a3f7b877c04a88c81856b
-                const res = await fetchTransactions({ hash: txLink, limit: 1 });
+                const res = await fetchTransactions(
+                    { hash: txLink, limit: 1 },
+                    testnet
+                );
                 hash = Buffer.from(res.transactions[0].hash, 'base64');
                 lt = BigInt(res.transactions[0].lt);
                 addr = Address.parseRaw(res.transactions[0].account);
@@ -127,11 +161,11 @@ export async function linkToTx(txLink: string): Promise<BaseTxInfo> {
     return { lt, hash, addr };
 }
 
-export function txToLinks(opts: BaseTxInfo): TxLinks {
+export function txToLinks(opts: BaseTxInfo, testnet: boolean): TxLinks {
     return {
-        toncx: `https://ton.cx/tx/${opts.lt}:${opts.hash.toString('base64')}:${opts.addr.toString()}`,
-        tonviewer: `https://tonviewer.com/transaction/${opts.hash.toString('hex')}`,
-        tonscan: `https://tonscan.org/tx/${opts.hash.toString('base64')}`,
-        toncoin: `https://explorer.toncoin.org/transaction?account=${opts.addr.toString()}&lt=${opts.lt}&hash=${opts.hash.toString('hex')}`,
+        toncx: `https://${testnet ? 'testnet.' : ''}ton.cx/tx/${opts.lt}:${opts.hash.toString('base64')}:${opts.addr.toString()}`,
+        tonviewer: `https://${testnet ? 'testnet.' : ''}tonviewer.com/transaction/${opts.hash.toString('hex')}`,
+        tonscan: `https://${testnet ? 'testnet.' : ''}tonscan.org/tx/${opts.hash.toString('base64')}`,
+        toncoin: `https://${testnet ? 'test-' : ''}explorer.toncoin.org/transaction?account=${opts.addr.toString()}&lt=${opts.lt}&hash=${opts.hash.toString('hex')}`,
     };
 }
