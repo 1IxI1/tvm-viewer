@@ -65,7 +65,10 @@ export const getQueryParam = (param: string) => {
 };
 
 function App() {
-    const [link, setLink] = useState<string>('');
+    const testnet = getQueryParam('testnet') === 'true';
+    const txFromArg = getQueryParam('tx');
+
+    const [link, setLink] = useState<string>(txFromArg || '');
     const [isErrorOpen, setIsErrorOpen] = useState(false);
     const [areLogsOpen, setAreLogsOpen] = useState(false);
     const [errorText, setErrorText] = useState('');
@@ -75,8 +78,6 @@ function App() {
     >(undefined);
     const [processing, setProcessing] = useState(false);
     const [selectedStep, setSelectedStep] = useState<number>(0);
-
-    const testnet = getQueryParam('testnet') === 'true';
 
     async function viewTransaction() {
         console.log('Viewing transaction:', link);
@@ -91,6 +92,11 @@ function App() {
                 setEmulationStatus
             );
             setEmulationResult(emulation);
+            // if tx was provided as arg -
+            // update link in input field to tonviewer
+            if (txFromArg == link) {
+                setLink(emulation.links.tonviewer);
+            }
         } catch (e) {
             if (e instanceof Error) {
                 setErrorText(e.message);
