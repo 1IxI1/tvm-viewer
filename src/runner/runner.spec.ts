@@ -85,7 +85,7 @@ describe('Converter', () => {
             },
             false
         );
-        expect(res).toBe(36109845);
+        expect(res.mcSeqno).toBe(36109845);
     });
 });
 
@@ -108,6 +108,9 @@ describe('Runner', () => {
         'https://ton.cx/tx/46843694000003:uOHmclA04YxzjqMWcIWH6+kQ38izn62U8nyFNdqR0nw=:EQA--JhKKuYfb-WAw7vDWEfD4fg2WOt9AuLH6xHPvF0RTUNA',
         'https://ton.cx/tx/46843694000021:nwjPEIK88JGyPRLFVzNYHKkBb62OyVSgZKuU6J0mLC0=:EQA--JhKKuYfb-WAw7vDWEfD4fg2WOt9AuLH6xHPvF0RTUNA',
     ];
+
+    // it('should emulate with libs', async () => {
+    // });
 
     it('should emulate first tx', async () => {
         await waitForRateLimit();
@@ -138,7 +141,7 @@ describe('Runner', () => {
         for (let tx of txsWithRandom) {
             await waitForRateLimit();
             const res = await getEmulationWithStack(tx, false);
-            expect(res.stateUpdateHashOk).toBe(false);
+            expect(res.stateUpdateHashOk).toBe(true);
             if (res.computeInfo !== 'skipped')
                 expect(res.computeInfo.success).toBe(true);
         }

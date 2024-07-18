@@ -156,7 +156,7 @@ export async function getEmulationWithStack(
     const tx = (await clientV4.getAccountTransactions(address, lt, hash))[0];
     console.log(tx.tx.now, 'tx time');
     await waitForRateLimit();
-    const mcSeqno = await mcSeqnoByShard(tx.block, testnet);
+    const { mcSeqno, randSeed } = await mcSeqnoByShard(tx.block, testnet);
     await waitForRateLimit();
     const fullBlock = await clientV4.getBlock(mcSeqno);
     const mcBlockSeqno = fullBlock.shards[0].seqno;
@@ -248,7 +248,7 @@ export async function getEmulationWithStack(
             message: beginCell().store(storeMessage(_msg)).endCell(),
             now: _tx.now,
             lt: _tx.lt,
-            randomSeed: Buffer.alloc(32),
+            randomSeed: randSeed,
             ignoreChksig: false,
             debugEnabled: true,
         });
@@ -372,7 +372,7 @@ export async function getEmulationWithStack(
         }
 
         if (line.startsWith('stack:')) {
-            console.log('Parsing stack for', instruction, line);
+            // console.log('Parsing stack for', instruction, line);
             const stack = parseStack(line);
             // got stack. now link it with the instruction
             if (instruction) {

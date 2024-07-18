@@ -40,7 +40,10 @@ export async function mcSeqnoByShard(
         fileHash: string;
     },
     testnet: boolean
-): Promise<number> {
+): Promise<{
+    mcSeqno: number;
+    randSeed: Buffer;
+}> {
     try {
         const shardInt = BigInt(shard.shard);
         const shardUint =
@@ -64,7 +67,11 @@ export async function mcSeqnoByShard(
                     block.root_hash
             );
         }
-        return block.masterchain_block_ref.seqno;
+        console.log(block);
+        return {
+            mcSeqno: block.masterchain_block_ref.seqno,
+            randSeed: Buffer.from(block.rand_seed, 'base64'),
+        };
     } catch (error) {
         console.error('Error fetching mc_seqno:', error);
         throw error;
