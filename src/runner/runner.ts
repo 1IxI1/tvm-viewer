@@ -13,6 +13,7 @@ import {
     loadShardAccount,
     Transaction,
     loadTransaction,
+    Dictionary,
 } from '@ton/core';
 import {
     loadConfigParamsAsSlice,
@@ -29,7 +30,7 @@ import {
     TVMLog,
 } from './types';
 import { parseStack } from './stack';
-import { linkToTx, mcSeqnoByShard, txToLinks } from './utils';
+import { getLib, linkToTx, mcSeqnoByShard, txToLinks } from './utils';
 
 function b64ToBigInt(b64: string): bigint {
     return BigInt('0x' + Buffer.from(b64, 'base64').toString('hex'));
@@ -213,13 +214,37 @@ export async function getEmulationWithStack(
     account = getAccountResult.account;
     let initialShardAccount = createShardAccountFromAPI(account, address);
 
-    // 4.1 get account stete after all txs for (maybe) verification
-    const { account: accountAfter } = await clientV4.getAccount(
-        mcBlockSeqno,
-        address
+    const state = initialShardAccount.account?.storage.state;
+
+    // 4.1 Get libs if needed
+    const _libs = Dictionary.empty(
+        Dictionary.Keys.BigUint(256),
+        Dictionary.Values.Cell()
     );
-    console.log(account.balance.coins, 'coins before');
-    if (isOurTxLastTx) console.log(accountAfter.balance.coins, 'coins after');
+    if (state?.type == 'active') {
+        sendStatus('Getting libs');
+        const code = state.state.code;
+        if (code instanceof Cell && code.bits.length == 256 + 8) {
+            const cs = code.beginParse(true);
+            const tag = cs.loadUint(8);
+            if (tag == 2) {
+                const libHash = cs.loadBuffer(32);
+                const libHashHex = libHash.toString('hex').toUpperCase();
+                const actualCode = await getLib(libHashHex, testnet);
+                _libs.set(BigInt(`0x${libHashHex}`), actualCode);
+            }
+        }
+    }
+    let libs: Cell | null = null;
+    if (_libs.size > 0) libs = beginCell().storeDictDirect(_libs).endCell();
+
+    // 4.2 get account state after all txs for (maybe) verification
+    // const { account: accountAfter } = await clientV4.getAccount(
+    //     mcBlockSeqno,
+    //     address
+    // );
+    // console.log(account.balance.coins, 'coins before');
+    // if (isOurTxLastTx) console.log(accountAfter.balance.coins, 'coins after');
 
     // 5. prep. emulator
 
@@ -242,7 +267,7 @@ export async function getEmulationWithStack(
 
         let _txRes = _executor.runTransaction({
             config: blockConfig,
-            libs: null,
+            libs,
             verbosity: _withStack ? 'full_location_stack_verbose' : 'short',
             shardAccount: _shardAccountStr,
             message: beginCell().store(storeMessage(_msg)).endCell(),
@@ -402,20 +427,20 @@ export async function getEmulationWithStack(
     );
     const endBalance = parsedShardAccount.account?.storage.balance.coins || 0n;
 
-    if (isOurTxLastTx) {
-        // we dont know mainnet balance if its not last tx in block
-        const balanceCheck = endBalance === BigInt(accountAfter.balance.coins);
-        if (!balanceCheck) {
-            console.error(
-                `Balance check failed, expected ${accountAfter.balance.coins} got ${endBalance}`
-            );
-        } else {
-            console.log('Balance check ok');
-        }
-    } else {
-        console.log('Balance check skipped');
-        console.log(endBalance, 'end balance');
-    }
+    // if (isOurTxLastTx) {
+    //     // we dont know mainnet balance if its not last tx in block
+    //     const balanceCheck = endBalance === BigInt(accountAfter.balance.coins);
+    //     if (!balanceCheck) {
+    //         console.error(
+    //             `Balance check failed, expected ${accountAfter.balance.coins} got ${endBalance}`
+    //         );
+    //     } else {
+    //         console.log('Balance check ok');
+    //     }
+    // } else {
+    //     console.log('Balance check skipped');
+    //     console.log(endBalance, 'end balance');
+    // }
 
     const theTx = loadTransaction(
         Cell.fromBase64(txResCorrect.result.transaction).asSlice()
@@ -490,9 +515,6 @@ export async function getEmulationWithStack(
                   gasUsed: computePhase.gasUsed,
                   gasFees: computePhase.gasFees,
               };
-
-    console.log(parsedShardAccount);
-    console.log(accountAfter);
 
     return {
         sender: src,

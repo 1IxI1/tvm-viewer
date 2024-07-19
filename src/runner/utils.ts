@@ -1,4 +1,4 @@
-import { Address } from '@ton/core';
+import { Address, Cell } from '@ton/core';
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { z } from 'zod';
 import {
@@ -67,13 +67,37 @@ export async function mcSeqnoByShard(
                     block.root_hash
             );
         }
-        console.log(block);
         return {
             mcSeqno: block.masterchain_block_ref.seqno,
             randSeed: Buffer.from(block.rand_seed, 'base64'),
         };
     } catch (error) {
         console.error('Error fetching mc_seqno:', error);
+        throw error;
+    }
+}
+
+export async function getLib(libhash: string, testnet: boolean): Promise<Cell> {
+    // gets a library by its hash from dton's graphql
+    const dtonEndpoint = `https://${testnet ? 'testnet.' : ''}dton.io/graphql`;
+    const graphqlQuery = {
+        query: `
+            query fetchAuthor {
+                get_lib(lib_hash: "${libhash}")
+            }
+        `,
+        variables: {},
+    };
+    try {
+        const res = await axios.post(dtonEndpoint, graphqlQuery, {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+        const libB64 = res.data.data.get_lib;
+        return Cell.fromBase64(libB64);
+    } catch (error) {
+        console.error('Error fetching library:', error);
         throw error;
     }
 }

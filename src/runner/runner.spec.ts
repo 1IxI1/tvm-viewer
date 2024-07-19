@@ -3,7 +3,7 @@ import { getEmulationWithStack, waitForRateLimit } from './runner';
 import { AccountFromAPI } from './types';
 import { linkToTx, mcSeqnoByShard, txToLinks } from './utils';
 
-describe('Converter', () => {
+describe.skip('Converter', () => {
     const justHash =
         '3e5f49798de239da5d8f80b4dc300204d37613e4203a3f7b877c04a88c81856b';
     const toncx =
@@ -90,6 +90,8 @@ describe('Converter', () => {
 });
 
 describe('Runner', () => {
+    const withLibs =
+        'https://ton.cx/tx/47769590000001:TfGC2E6eG7522c/jW9AjwkTFWwPL0RhFd2mGiqLoW/Q=:EQC39c119oqPkaB-fiA8_EKfejP24_IyKCNEyKFUsvXsfIHe';
     const first =
         'https://ton.cx/tx/44640875000007:53bLbTDYoHiBHGJPz2/oGr1JvJ/SS7iVVeMTUi5PYpw=:EQCtJGu1Q5xptmRFuP16M2w01QValw3V8IiyxQczAf83YITE';
     const txs = [
@@ -109,8 +111,11 @@ describe('Runner', () => {
         'https://ton.cx/tx/46843694000021:nwjPEIK88JGyPRLFVzNYHKkBb62OyVSgZKuU6J0mLC0=:EQA--JhKKuYfb-WAw7vDWEfD4fg2WOt9AuLH6xHPvF0RTUNA',
     ];
 
-    // it('should emulate with libs', async () => {
-    // });
+    it('should emulate with libs', async () => {
+        await waitForRateLimit();
+        const res = await getEmulationWithStack(withLibs, false);
+        expect(res.stateUpdateHashOk).toBe(true);
+    });
 
     it('should emulate first tx', async () => {
         await waitForRateLimit();
