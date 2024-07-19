@@ -66,9 +66,9 @@ export const getQueryParam = (param: string) => {
 
 function App() {
     const testnet = getQueryParam('testnet') === 'true';
-    const txFromArg = getQueryParam('tx');
+    const txFromArg = decodeURIComponent(getQueryParam('tx') || '');
 
-    const [link, setLink] = useState<string>(txFromArg || '');
+    const [link, setLink] = useState<string>(txFromArg);
     const [isErrorOpen, setIsErrorOpen] = useState(false);
     const [areLogsOpen, setAreLogsOpen] = useState(false);
     const [errorText, setErrorText] = useState('');
@@ -78,6 +78,16 @@ function App() {
     >(undefined);
     const [processing, setProcessing] = useState(false);
     const [selectedStep, setSelectedStep] = useState<number>(0);
+
+    const updateURLWithTx = (tx: string) => {
+        const encodedTx = encodeURIComponent(tx);
+        const url = new URL(window.location.href);
+        if (testnet) {
+            url.searchParams.set('testnet', testnet.toString());
+        }
+        url.searchParams.set('tx', encodedTx);
+        window.history.pushState({}, '', url.toString());
+    };
 
     async function viewTransaction() {
         console.log('Viewing transaction:', link);
@@ -92,11 +102,7 @@ function App() {
                 setEmulationStatus
             );
             setEmulationResult(emulation);
-            // if tx was provided as arg -
-            // update link in input field to tonviewer
-            if (txFromArg == link) {
-                setLink(emulation.links.tonviewer);
-            }
+            updateURLWithTx(tx.hash.toString('hex') || '');
         } catch (e) {
             if (e instanceof Error) {
                 setErrorText(e.message);
