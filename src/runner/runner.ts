@@ -14,6 +14,7 @@ import {
     Transaction,
     loadTransaction,
     Dictionary,
+    Slice,
 } from '@ton/core';
 import {
     loadConfigParamsAsSlice,
@@ -221,19 +222,28 @@ export async function getEmulationWithStack(
         Dictionary.Keys.BigUint(256),
         Dictionary.Values.Cell()
     );
-    if (state?.type == 'active') {
-        sendStatus('Getting libs');
-        const code = state.state.code;
+
+    async function tryAddLib(code?: Cell | null) {
         if (code instanceof Cell && code.bits.length == 256 + 8) {
             const cs = code.beginParse(true);
             const tag = cs.loadUint(8);
             if (tag == 2) {
+                sendStatus('Getting libs');
                 const libHash = cs.loadBuffer(32);
                 const libHashHex = libHash.toString('hex').toUpperCase();
+                console.log('Found lib:', libHashHex);
                 const actualCode = await getLib(libHashHex, testnet);
                 _libs.set(BigInt(`0x${libHashHex}`), actualCode);
             }
         }
+    }
+
+    if (state?.type == 'active') {
+        await tryAddLib(state.state.code);
+    }
+    const msgInit = tx.tx.inMessage?.init;
+    if (msgInit) {
+        await tryAddLib(msgInit.code);
     }
     let libs: Cell | null = null;
     if (_libs.size > 0) libs = beginCell().storeDictDirect(_libs).endCell();
