@@ -1,6 +1,4 @@
 import { Buffer } from 'buffer';
-// import { Executor } from './executor/Executor';
-// import { getHttpV4Endpoint } from '@orbs-network/ton-access';
 import { Blockchain, IExecutor } from '@ton/sandbox';
 import {
     AccountState,
@@ -14,7 +12,6 @@ import {
     Transaction,
     loadTransaction,
     Dictionary,
-    Slice,
 } from '@ton/core';
 import {
     loadConfigParamsAsSlice,
@@ -132,8 +129,6 @@ export async function getEmulationWithStack(
     testnet: boolean,
     sendStatus: (status: string) => void = () => {}
 ): Promise<EmulateWithStackResult> {
-    // const endpoint = await getHttpV4Endpoint({ network: 'mainnet' });
-
     const endpointV4 = `https://${testnet ? 'sandbox' : 'mainnet'}-v4.tonhubapi.com`;
     const endpointV2 = `https://${testnet ? 'testnet.' : ''}toncenter.com/api/v2/jsonRPC`;
 
@@ -199,7 +194,6 @@ export async function getEmulationWithStack(
     await waitForRateLimit();
     const getConfigResult = await clientV4.getConfig(mcBlockSeqno);
     const blockConfig = getConfigResult.config.cell;
-    const blockConfigCell = Cell.fromBase64(blockConfig);
     console.log(
         'Fees:',
         parseFullConfig(loadConfigParamsAsSlice(blockConfig)).msgPrices
@@ -214,8 +208,6 @@ export async function getEmulationWithStack(
     );
     account = getAccountResult.account;
     let initialShardAccount = createShardAccountFromAPI(account, address);
-
-    const state = initialShardAccount.account?.storage.state;
 
     // 4.1 Get libs if needed
     const _libs = Dictionary.empty(
@@ -238,6 +230,7 @@ export async function getEmulationWithStack(
         }
     }
 
+    const state = initialShardAccount.account?.storage.state;
     if (state?.type == 'active') {
         await tryAddLib(state.state.code);
     }
@@ -247,14 +240,6 @@ export async function getEmulationWithStack(
     }
     let libs: Cell | null = null;
     if (_libs.size > 0) libs = beginCell().storeDictDirect(_libs).endCell();
-
-    // 4.2 get account state after all txs for (maybe) verification
-    // const { account: accountAfter } = await clientV4.getAccount(
-    //     mcBlockSeqno,
-    //     address
-    // );
-    // console.log(account.balance.coins, 'coins before');
-    // if (isOurTxLastTx) console.log(accountAfter.balance.coins, 'coins after');
 
     // 5. prep. emulator
 
@@ -383,7 +368,6 @@ export async function getEmulationWithStack(
     }
 
     console.log('logs:', txResCorrect.logs);
-    console.log('debugLogs:', txResWithStack.debugLogs);
 
     // 8. process stack and instructions
 
@@ -436,21 +420,6 @@ export async function getEmulationWithStack(
         Cell.fromBase64(txResCorrect.result.shardAccount).asSlice()
     );
     const endBalance = parsedShardAccount.account?.storage.balance.coins || 0n;
-
-    // if (isOurTxLastTx) {
-    //     // we dont know mainnet balance if its not last tx in block
-    //     const balanceCheck = endBalance === BigInt(accountAfter.balance.coins);
-    //     if (!balanceCheck) {
-    //         console.error(
-    //             `Balance check failed, expected ${accountAfter.balance.coins} got ${endBalance}`
-    //         );
-    //     } else {
-    //         console.log('Balance check ok');
-    //     }
-    // } else {
-    //     console.log('Balance check skipped');
-    //     console.log(endBalance, 'end balance');
-    // }
 
     const theTx = loadTransaction(
         Cell.fromBase64(txResCorrect.result.transaction).asSlice()

@@ -330,7 +330,11 @@ function App() {
                                         link={emulationResult.links.toncoin}
                                         explorer="explorer.toncoin.org"
                                     />
-                                    <Flex mt="2rem">
+                                    <TxLink
+                                        link={emulationResult.links.dton}
+                                        explorer="dton.io"
+                                    />
+                                    <Flex mt="1.5rem">
                                         <Spacer />
                                         <Button
                                             size="sm"

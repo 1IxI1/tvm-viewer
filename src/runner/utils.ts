@@ -1,6 +1,5 @@
 import { Address, Cell } from '@ton/core';
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { z } from 'zod';
 import {
     AddressBookEntry,
     BaseTxInfo,
@@ -159,6 +158,20 @@ export async function linkToTx(
         lt = BigInt(url.searchParams.get('lt') || '0');
         hash = Buffer.from(url.searchParams.get('hash') || '', 'hex');
         addr = Address.parse(url.searchParams.get('account') || '');
+    } else if (
+        txLink.startsWith('https://dton.io/tx') ||
+        txLink.startsWith('https://testnet.dton.io/tx')
+    ) {
+        // example:
+        // https://dton.io/tx/F64C6A3CDF3FAD1D786AACF9A6130F18F3F76EEB71294F53BBD812AD3703E70A
+        const infoPart = testnet ? txLink.slice(27) : txLink.slice(19);
+        const res = await fetchTransactions(
+            { hash: infoPart, limit: 1 },
+            testnet
+        );
+        hash = Buffer.from(infoPart, 'hex');
+        addr = Address.parseRaw(res.transactions[0].account);
+        lt = BigInt(res.transactions[0].lt);
     } else {
         try {
             // (copied from ton.cx lt and hash field)
@@ -198,5 +211,6 @@ export function txToLinks(opts: BaseTxInfo, testnet: boolean): TxLinks {
         tonviewer: `https://${testnet ? 'testnet.' : ''}tonviewer.com/transaction/${opts.hash.toString('hex')}`,
         tonscan: `https://${testnet ? 'testnet.' : ''}tonscan.org/tx/${opts.hash.toString('base64')}`,
         toncoin: `https://${testnet ? 'test-' : ''}explorer.toncoin.org/transaction?account=${opts.addr.toString()}&lt=${opts.lt}&hash=${opts.hash.toString('hex')}`,
+        dton: `https://${testnet ? 'testnet.' : ''}dton.io/tx/F64C6A3CDF3FAD1D786AACF9A6130F18F3F76EEB71294F53BBD812AD3703E70A`,
     };
 }

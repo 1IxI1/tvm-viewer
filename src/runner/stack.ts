@@ -26,9 +26,7 @@ export function paddedBufferToBits(buff: Buffer, incomplete: boolean = true) {
 
 export function builderFromCanonical(word: string): Builder {
     let buffer = Buffer.from(word.slice(3, -1), 'hex');
-    // first byte - number of refs. load it
-    const refs = buffer[0];
-    // second - num of bytes
+    // second byte - num of bytes
     let len = buffer[1];
     buffer = buffer.subarray(2);
     let incomplete = false;

@@ -45,6 +45,7 @@ export type TxLinks = {
     tonviewer: string;
     tonscan: string;
     toncoin: string;
+    dton: string;
 };
 
 export type StackElement =
@@ -121,7 +122,7 @@ export interface TransactionIndexed {
         message_content: {
             hash: string;
             body: string;
-            decoded: Record<string, unknown>; // Adjust based on actual content structure
+            decoded: Record<string, unknown>;
         };
         init_state: {
             hash: string;
@@ -145,7 +146,7 @@ export interface TransactionIndexed {
         message_content: {
             hash: string;
             body: string;
-            decoded: Record<string, unknown>; // Adjust based on actual content structure
+            decoded: Record<string, unknown>;
         };
         init_state: {
             hash: string;
@@ -180,7 +181,6 @@ export interface TransactionList {
     address_book: Record<string, AddressBookEntry>;
 }
 
-// Define parameters interface for the fetchTransactions function
 export interface GetTransactionsParams {
     workchain?: number | null;
     shard?: string | null;
